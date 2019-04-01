@@ -38,13 +38,13 @@ def app(env, start_response):
         return [remote.encode('utf-8')]
 
     if path == '/complete':
-        start_response('200 OK', [('Content-Type', 'text/html')])
+        start_response('200 OK', [('Content-Type', 'application/json')])
         session = Session()
         messages = list(session.query(Message).order_by(func.random()).limit(100))
         messages.append(Message(content='Hello, World!'))
         messages.sort(key=lambda m: m.content)
         session.close()
-        return [TEMPLATE.render(messages=messages).encode('utf-8')]
+        return [json.dumps({'data': {m.id: m.content for m in messages}}).encode('utf-8')]
 
     start_response('404 Not Found', [('Content-Type', 'text/plain')])
     return [b'Not Found']

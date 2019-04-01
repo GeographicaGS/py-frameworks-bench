@@ -1,31 +1,12 @@
 import os
-
-HOST = os.environ.get('DHOST', '127.0.0.1')
+import sys
+import json
+import aiohttp
 
 import signal
 import logging
 
-from tornado import web, gen, httpclient, httpserver, ioloop, template
-
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-
-
-class JSONHandler(web.RequestHandler):
-
-    def get(self):
-        self.write({'message': 'Hello, World!'})
-
-
-class RemoteHandler(web.RequestHandler):
-
-    @gen.coroutine
-    def get(self):
-        response = yield httpclient.AsyncHTTPClient().fetch('http://%s' % HOST)
-        self.write(response.body)
-
-
-root = os.path.dirname(os.path.abspath(__file__))
-
+from tornado import web, gen, httpclient, httpserver, ioloop
 
 from sqlalchemy import create_engine, schema, Column
 from sqlalchemy.sql.expression import func
@@ -33,13 +14,13 @@ from sqlalchemy.types import Integer, String
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.WARNING)
+
+HOST = os.environ.get('DHOST', '127.0.0.1')
 engine = create_engine('postgres://benchmark:benchmark@%s:5432/benchmark' % HOST, pool_size=10)
 metadata = schema.MetaData()
 Base = declarative_base(metadata=metadata)
 Session = sessionmaker(bind=engine)
-loader = template.Loader(os.path.join(root))
-
-
 class Message(Base):
     __tablename__ = 'message'
 
@@ -47,17 +28,46 @@ class Message(Base):
     content = Column(String(length=512))
 
 
+
+class JSONHandler(web.RequestHandler):
+
+    async def payload(self):
+        self.write({'message': 'Hello, World!'})
+
+    async def get(self):
+        # await self.payload()
+        self.write({'message': 'Hello, World!'})
+        self.finish()
+
+
+class RemoteHandler(web.RequestHandler):
+
+    async def get_url(self, session, url):
+        async with session.get(url) as response:
+            return await response.text()
+
+    async def get(self):
+        async with aiohttp.ClientSession() as session:
+            response_text = await self.get_url(session, 'http://%s' % HOST)
+            self.write(response_text)
+            self.finish()
+
+
 class CompleteHandler(web.RequestHandler):
 
-    @gen.coroutine
-    def get(self):
+    async def db_payload(self):
         session = Session()
         messages = list(session.query(Message).order_by(func.random()).limit(100))
         messages.append(Message(content='Hello, World!'))
         messages.sort(key=lambda m: m.content)
-        response = loader.load('template.html').generate(messages=messages)
         session.close()
-        self.write(response)
+        return {'data': {m.id: m.content for m in messages}}
+
+    async def get(self):
+        self.set_header("Content-Type", 'application/json')
+        data = await self.db_payload()
+        self.write(json.dumps(data))
+        self.finish()
 
 
 app = web.Application(
@@ -69,35 +79,27 @@ app = web.Application(
 )
 
 
-def sig_handler(sig, frame):
-    logging.warning('Caught signal: %s', sig)
-    loop = ioloop.IOLoop.instance()
-    loop.add_callback(shutdown)
-
-
-def shutdown():
-    logging.info('Stopping HTTP server.')
-    loop = ioloop.IOLoop.instance()
-    loop.stop()
-    if os.path.exists('pid'):
-        os.remove('pid')
-
-
 if __name__ == '__main__':
     logging.info('Starting HTTP server.')
 
     with open('pid', 'w') as f:
         f.write(str(os.getpid()))
 
-    server = httpserver.HTTPServer(app)
-    server.bind(5000, "0.0.0.0")
-    server.start(2)
+    try:
+        server = httpserver.HTTPServer(app)
+        server.bind(5000, "0.0.0.0")
+        server.start(2)
 
-    signal.signal(signal.SIGTERM, sig_handler)
-    signal.signal(signal.SIGINT, sig_handler)
+        # loop = ioloop.IOLoop.instance()
+        # loop.start()
 
-    loop = ioloop.IOLoop.instance()
-    loop.start()
+        # app.listen(5000, "0.0.0.0")
+        ioloop.IOLoop.current().start()
+    except (KeyboardInterrupt, SystemExit):
+        server.stop()
+        loop = ioloop.IOLoop.instance()
+        loop.stop()
+        sys.exit(0)
 
 
 # pylama:ignore=E402

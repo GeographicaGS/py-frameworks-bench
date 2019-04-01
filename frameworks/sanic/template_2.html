@@ -11,8 +11,8 @@
       </tr>
       {% for m in messages %}
       <tr>
-        <td>{{ m.id }}</td>
-        <td>{{ m.content }}</td>
+        <td>{{ m[0] }}</td>
+        <td>{{ m[1] }}</td>
       </tr>
       {% endfor %}
   </body>

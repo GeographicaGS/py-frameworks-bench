@@ -1,0 +1,4 @@
+sanic               == 0.8.3
+# peewee-async        == 0.5.3
+peewee==2.10.2
+sanic_jinja2==0.7.4

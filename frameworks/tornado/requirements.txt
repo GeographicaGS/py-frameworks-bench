@@ -1,4 +1,5 @@
-tornado     == 4.3
+#tornado     == 4.3
+tornado     == 6.0.1
 daemonize
 psycopg2
 SQLAlchemy  >= 1.0.12

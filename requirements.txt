@@ -5,12 +5,16 @@ gunicorn            == 19.6.0
 meinheld            == 0.5.9
 
 # Share
-Jinja2              == 2.8.0
+#Jinja2              == 2.8.0
+Jinja2              == 2.10
 requests            == 2.10.0
 Cython              == 0.24
 
-aiohttp             == 0.21.6
-peewee-async        == 0.5.2
+# aiohttp             == 0.21.6
+aiohttp             == 3.5.4
+peewee-async        == 0.5.3
+peewee==2.10.2
+sanic_jinja2==0.7.4
 aiopg               == 0.9.2
 
 bottle              == 0.12.9
@@ -19,8 +23,14 @@ Django              == 1.9.7
 django-postgrespool == 0.3.0
 
 falcon              == 1.0.0
-flask               == 0.11.1
-Werkzeug            == 0.11.10
+
+#flask               == 0.11.1
+flask               == 1.0.2
+#tornado             == 4.3
+tornado             == 6.0.1
+
+#Werkzeug            == 0.11.10
+Werkzeug            == 0.14
 
 wheezy.web[jinja2]  == 0.1.485
 
@@ -29,8 +39,6 @@ muffin-jinja2       == 0.1.0
 muffin-peewee       == 1.0.8
 
 pyramid             == 1.7
-
-tornado             == 4.3
 
 weppy               == 0.7.1
 
