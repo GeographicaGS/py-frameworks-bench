@@ -35,7 +35,7 @@ bench: $(VIRTUAL_ENV)
 		@sleep 2
 		@make wrk TESTEE=aiohttp
 		@kill `cat $(CURDIR)/pid`
-		@sleep 10
+		@sleep 5
 	# # bottle
 	# 	# @make bottle OPTS="-p pid -D -w 2"
 	# 	# @sleep 2
@@ -89,8 +89,8 @@ bench: $(VIRTUAL_ENV)
 
 TESTEE = ""
 wrk:
-	TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/json
-	TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/remote
+	# TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/json
+	# TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/remote
 	TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/complete
 
 OPTS =
@@ -126,7 +126,7 @@ pyramid:
 	    --chdir=$(CURDIR)/frameworks/pyramid
 
 tornado:
-	cd frameworks/tornado && $(VIRTUAL_ENV)/bin/python app.py $(OPTS)
+	cd frameworks/tornado && $(VIRTUAL_ENV)/bin/python app.py & echo "$$!" > pid
 
 wsgi:
 	@DHOST=$(DHOST) $(VIRTUAL_ENV)/bin/gunicorn app:app $(OPTS) \
@@ -134,6 +134,6 @@ wsgi:
 	    --chdir=$(CURDIR)/frameworks/wsgi
 
 sanic:
-	@DHOST=$(DHOST) $(VIRTUAL_ENV)/bin/gunicorn app:app & echo "$$!" > pid \
+	@DHOST=$(DHOST) $(VIRTUAL_ENV)/bin/gunicorn app:app $(OPTS) \
 		-k sanic.worker.GunicornWorker --bind=127.0.0.1:5000 \
 		--chdir=$(CURDIR)/frameworks/sanic

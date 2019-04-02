@@ -1,28 +1,45 @@
 import os
 import aiohttp
 import psycopg2
-from sanic import Sanic
+from sanic import Sanic, Blueprint
 from sanic.response import text, json, html
-
-from sqlalchemy import create_engine, schema, Column
-from sqlalchemy.sql.expression import func
-from sqlalchemy.types import Integer, String
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-
-app = Sanic()
+import asyncpg
 
 
 HOST = os.environ.get('DHOST', '127.0.0.1')
-engine = create_engine('postgres://benchmark:benchmark@%s:5432/benchmark' % HOST, pool_size=10)
-metadata = schema.MetaData()
-Base = declarative_base(metadata=metadata)
-Session = sessionmaker(bind=engine)
-class Message(Base):
-    __tablename__ = 'message'
 
-    id = Column(Integer, primary_key=True)
-    content = Column(String(length=512))
+
+bp = Blueprint('dp')
+
+class pg:
+    def __init__(self, pg_pool):
+        self.pg_pool = pg_pool
+
+    async def fetch(self, sql, *args, **kwargs):
+        async with self.pg_pool.acquire() as connection:
+            return await connection.fetch(sql, *args, **kwargs)
+
+    async def execute(self, sql, *args, **kwargs):
+        async with self.pg_pool.acquire() as connection:
+            return await connection.execute(sql, *args, **kwargs)
+
+@bp.listener('before_server_start')
+async def init_pg(app, loop):
+    """
+    Init Postgresql DB.
+    """
+    bp.pg_pool = await asyncpg.create_pool(
+        user='benchmark', password='benchmark', database='benchmark', host=HOST,
+        max_inactive_connection_lifetime=60,
+        min_size=1,
+        max_size=20,
+        loop=loop
+    )
+    app.pg = pg(bp.pg_pool)
+    print(' -- Setup connection pool -- ')
+
+app = Sanic()
+app.blueprint(bp)
 
 
 # JSON
@@ -44,17 +61,11 @@ async def remote(request):
 
 
 # Complete
-async def db_payload():
-    session = Session()
-    messages = list(session.query(Message).order_by(func.random()).limit(100))
-    messages.append(Message(content='Hello, World!'))
-    messages.sort(key=lambda m: m.content)
-    return messages
-
 @app.route("/complete")
 async def complete(request):
-    messages = await db_payload()
-    return json({'data': {m.id: m.content for m in messages}})
+    messages = await app.pg.fetch('SELECT * FROM message LIMIT 100;')
+    data = {'data': {m.get('id'): m.get('content') for m in messages}}
+    return json(data)
 
 
 if __name__ == "__main__":
