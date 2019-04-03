@@ -90,16 +90,9 @@ if __name__ == '__main__':
         server.bind(5000, "0.0.0.0")
         server.start(2)
 
-        # loop = ioloop.IOLoop.instance()
-        # loop.start()
-        # app.listen(5000, "0.0.0.0")
-
         ioloop.IOLoop.current().start()
     except (KeyboardInterrupt, SystemExit):
         server.stop()
         loop = ioloop.IOLoop.instance()
         loop.stop()
         sys.exit(0)
-
-
-# pylama:ignore=E402
