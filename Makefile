@@ -54,12 +54,12 @@ bench: $(VIRTUAL_ENV)
 	# 	@make wrk TESTEE=django
 	# 	@kill `cat $(CURDIR)/pid`
 	# 	@sleep 5
-	# falcon
-		@make falcon OPTS="-p pid -D -w 2"
-		@sleep 2
-		@make wrk TESTEE=falcon
-		@kill `cat $(CURDIR)/pid`
-		@sleep 5
+	# # falcon
+	# 	@make falcon OPTS="-p pid -D -w 2"
+	# 	@sleep 2
+	# 	@make wrk TESTEE=falcon
+	# 	@kill `cat $(CURDIR)/pid`
+	# 	@sleep 5
 	# # pyramid
 	# 	# @make pyramid OPTS="-p pid -D -w 2"
 	# 	# @sleep 2
@@ -86,11 +86,18 @@ bench: $(VIRTUAL_ENV)
 	# 	@kill `cat $(CURDIR)/pid`
 	# 	@sleep 5
 
+	# node
+		@make node
+		@sleep 2
+		@make wrk TESTEE=node
+		@kill `cat $(CURDIR)/pid`
+		@sleep 5
+
 
 TESTEE = ""
 wrk:
-	# TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/json
-	# TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/remote
+	TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/json
+	TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/remote
 	TESTEE=$(TESTEE) $(WRK) http://127.0.0.1:5000/complete
 
 OPTS =
@@ -137,3 +144,6 @@ sanic:
 	@DHOST=$(DHOST) $(VIRTUAL_ENV)/bin/gunicorn app:app $(OPTS) \
 		-k sanic.worker.GunicornWorker --bind=127.0.0.1:5000 \
 		--chdir=$(CURDIR)/frameworks/sanic
+
+node:
+	cd frameworks/node-api && node index.js & echo "$$!" > pid
