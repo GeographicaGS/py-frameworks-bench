@@ -19,7 +19,6 @@ class JSONResource(object):
         response.media = json_data
 
 class RemoteResource(object):
-
     def on_get(self, request, response):
         remote_response = requests.get('http://%s' % HOST)
         response.set_header('Content-Type', 'text/html')
